@@ -5,7 +5,7 @@
 -- Dumped from database version 17.4
 -- Dumped by pg_dump version 17.4
 
--- Started on 2025-03-28 21:25:48
+-- Started on 2025-03-29 12:38:01
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -18,14 +18,6 @@ SET check_function_bodies = false;
 SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
-
---
--- TOC entry 4 (class 2615 OID 2200)
--- Name: public; Type: SCHEMA; Schema: -; Owner: -
---
-
-CREATE SCHEMA public;
-
 
 --
 -- TOC entry 217 (class 1259 OID 25049)
@@ -46,6 +38,33 @@ CREATE TABLE public.items (
 
 ALTER TABLE public.items ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
     SEQUENCE NAME public.items_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- TOC entry 224 (class 1259 OID 25094)
+-- Name: known; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.known (
+    id bigint NOT NULL,
+    user_id bigint NOT NULL,
+    item_id bigint NOT NULL
+);
+
+
+--
+-- TOC entry 223 (class 1259 OID 25093)
+-- Name: known_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.known ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.known_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -114,7 +133,7 @@ ALTER TABLE public.users ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
 
 
 --
--- TOC entry 4755 (class 2606 OID 25068)
+-- TOC entry 4760 (class 2606 OID 25068)
 -- Name: items items_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -123,7 +142,16 @@ ALTER TABLE ONLY public.items
 
 
 --
--- TOC entry 4757 (class 2606 OID 25070)
+-- TOC entry 4766 (class 2606 OID 25098)
+-- Name: known known_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.known
+    ADD CONSTRAINT known_pkey PRIMARY KEY (id);
+
+
+--
+-- TOC entry 4762 (class 2606 OID 25070)
 -- Name: messages messages_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -132,7 +160,7 @@ ALTER TABLE ONLY public.messages
 
 
 --
--- TOC entry 4759 (class 2606 OID 25072)
+-- TOC entry 4764 (class 2606 OID 25072)
 -- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -141,7 +169,7 @@ ALTER TABLE ONLY public.users
 
 
 --
--- TOC entry 4762 (class 2606 OID 25073)
+-- TOC entry 4769 (class 2606 OID 25073)
 -- Name: messages chat_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -150,7 +178,7 @@ ALTER TABLE ONLY public.messages
 
 
 --
--- TOC entry 4763 (class 2606 OID 25078)
+-- TOC entry 4770 (class 2606 OID 25078)
 -- Name: messages from_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -159,7 +187,16 @@ ALTER TABLE ONLY public.messages
 
 
 --
--- TOC entry 4760 (class 2606 OID 25083)
+-- TOC entry 4771 (class 2606 OID 25104)
+-- Name: known item_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.known
+    ADD CONSTRAINT item_id_fk FOREIGN KEY (item_id) REFERENCES public.items(id);
+
+
+--
+-- TOC entry 4767 (class 2606 OID 25083)
 -- Name: items message_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -168,7 +205,7 @@ ALTER TABLE ONLY public.items
 
 
 --
--- TOC entry 4761 (class 2606 OID 25088)
+-- TOC entry 4768 (class 2606 OID 25088)
 -- Name: items user_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -176,7 +213,16 @@ ALTER TABLE ONLY public.items
     ADD CONSTRAINT user_id_fk FOREIGN KEY (user_id) REFERENCES public.users(id);
 
 
--- Completed on 2025-03-28 21:25:48
+--
+-- TOC entry 4772 (class 2606 OID 25099)
+-- Name: known user_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.known
+    ADD CONSTRAINT user_id_fk FOREIGN KEY (user_id) REFERENCES public.items(id);
+
+
+-- Completed on 2025-03-29 12:38:01
 
 --
 -- PostgreSQL database dump complete

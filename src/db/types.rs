@@ -58,3 +58,10 @@ impl Display for DbOTP {
         write!(f, "{}:{}", self.otp, self.created_at)
     }
 }
+
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct DbKnown {
+    pub id: i64,
+    pub user_id: i64,
+    pub item_id: i64,
+}
