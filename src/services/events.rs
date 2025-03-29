@@ -1,14 +1,15 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use log::debug;
 use serde::{Deserialize, Serialize};
-use tokio::sync::{mpsc::{Receiver, Sender}, RwLock};
+use tokio::{sync::{mpsc::{Receiver, Sender}, RwLock}, time::sleep};
 use tokio_stream::{wrappers::ReceiverStream, Stream};
 
 use crate::{models::Message, random::random_word};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum BackendEvent {
+    Ping,
     MessageSent(Message),
 }
 
@@ -73,6 +74,13 @@ impl EventService {
     pub async fn get_user_stream(&self, user_id: i64) -> ReceiverStream<BackendEvent> {
         let (sender, receiver) = tokio::sync::mpsc::channel(100);
         self.listener_pool.add_listener(user_id, sender.clone()).await;
+        let event_service = EventService::new(self.listener_pool.clone());
+        tokio::spawn(async move {
+            loop {
+                sleep(Duration::from_secs(60)).await;
+                event_service.notify(user_id, BackendEvent::Ping).await;                
+            }
+        });
         let stream = tokio_stream::wrappers::ReceiverStream::new(receiver);
         stream
     }
