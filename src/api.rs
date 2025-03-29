@@ -1,16 +1,18 @@
-use std::sync::Arc;
+use std::{convert::Infallible, sync::Arc};
 
 use axum::{
-    extract::State, http::StatusCode, routing::{get, patch, post}, Json, Router
+    extract::State, http::StatusCode, response::{sse::Event, Sse}, routing::{get, patch, post}, Json, Router
 };
 use axum_auth::AuthBearer;
 use serde::{Deserialize, Serialize};
+use tokio_stream::{Stream, StreamExt};
 
-use crate::{db::Storage, models::{Message, User}, services::{email::ImplEmailService, message::{ImplMessageService, MessageRequest, MessageService, MessageServiceError}, user::{ImplUserService, PatchUserField, UserService, UserServiceError}}};
+use crate::{db::Storage, models::{Message, User}, services::{email::ImplEmailService, events::{BackendEvent, EventService, ListenerPool}, message::{ImplMessageService, MessageRequest, MessageService, MessageServiceError}, user::{ImplUserService, PatchUserField, UserService, UserServiceError}}};
 
 #[derive(Clone)]
 pub struct AppState {
     pub storage: Arc<Storage>,
+    pub listener_pool: Arc<ListenerPool>,
 }
 
 pub async fn run() {
@@ -21,8 +23,10 @@ pub async fn run() {
         .route("/api/v1/users/me", get(get_me))
         .route("/api/v1/users/me", patch(patch_me))
         .route("/api/v1/messages/", post(send_message))
+        .route("/api/v1/events/sse", get(get_events))
         .with_state(AppState {
             storage: Arc::new(Storage::new().await),
+            listener_pool: Arc::new(ListenerPool::new()),
         });
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
@@ -159,12 +163,26 @@ pub async fn send_message(
 ) -> Result<Json<Message>, (StatusCode, Json<Error>)> {
     let user_service = ImplUserService::new(state.storage.clone());
     let message_service = ImplMessageService::new(state.storage.clone());
+    let event_service = EventService::new(state.listener_pool.clone());
     let user = user_service.authenticate_with_user(&token).await?;
     let message = message_service.auto_send_message(
         user.id,
         payload.chat_id,
         payload.username.as_deref(),
         &MessageRequest { text: payload.text },
+        &event_service,
     ).await?;
     Ok(Json(message))
+}
+
+pub async fn get_events(
+    State(state): State<AppState>,
+    AuthBearer(token): AuthBearer,
+) -> Result<Sse<impl Stream<Item = Result<Event, Infallible>>>, (StatusCode, Json<Error>)> {
+    let user_service = ImplUserService::new(state.storage.clone());
+    let user = user_service.authenticate_with_user(&token).await?;
+    let event_service = EventService::new(state.listener_pool.clone());
+    let stream = event_service.get_user_stream(user.id).await;
+    let sse = Sse::new(stream.map(|event| Ok(Event::default().json_data(event).unwrap())));
+    Ok(sse)
 }
